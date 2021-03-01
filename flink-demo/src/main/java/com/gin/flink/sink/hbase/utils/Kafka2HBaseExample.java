@@ -11,10 +11,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.*;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -58,25 +55,14 @@ public class Kafka2HBaseExample {
     }
 
     public static void writeIntoHBase(String m)throws IOException{
-		ConnectionPoolConfig config = new ConnectionPoolConfig();
-		config.setMaxTotal(20);
-		config.setMaxIdle(5);
-		config.setMaxWaitMillis(1000);
-		config.setTestOnBorrow(true);
 
-		
         Configuration hbaseConfig = HBaseConfiguration.create();
-        
-        hbaseConfig = HBaseConfiguration.create();
         hbaseConfig.set("hbase.zookeeper.quorum", "node02:2181,node03:2181,node04:2181");
         hbaseConfig.set("hbase.defaults.for.version.skip", "true");
         
-        HbaseAbstractConnectionPool pool = null;
-        
         try {
-    		pool = new HbaseAbstractConnectionPool(config, hbaseConfig);
 
-            Connection con = pool.getConnection();
+            Connection con = ConnectionFactory.createConnection(hbaseConfig);
 
             Admin admin = con.getAdmin();
             
@@ -94,10 +80,10 @@ public class Kafka2HBaseExample {
             
             table.put(put);
             table.close();
-    		pool.returnConnection(con);
+
     		
 		} catch (Exception e) {
-			pool.close();
+            System.out.println(e);
 		}
     }
 }
