@@ -1,11 +1,9 @@
 package com.gin.flink.sink.hbase.utils;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
@@ -18,26 +16,7 @@ import java.util.List;
 
 public class HBaseDAOImpl {
 
-    static Configuration conf = null;
-    Connection conn = null;
-
-    public HBaseDAOImpl() {
-        conf = new Configuration();
-        String zkList = "node02,node03,node04";
-        conf.set("hbase.zookeeper.quorum", zkList);
-        try {
-            // 一般一个job启动一个connect即可
-            // connect是重量级的, 线程安全
-            // table admin操作连接线程不安全, 需要关闭, 不建议自行池化或者cache( https://hbase.apache.org/apidocs/index.html )
-            // 可以选池化配置参数
-            // AbstractRpcClient HConstants.HBASE_CLIENT_IPC_POOL_TYPE
-            //conf.set("hbase.client.ipc.pool.type","Reusable");
-            //conf.set("hbase.client.ipc.pool.size","10");
-            conn = ConnectionFactory.createConnection(conf);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+    private Connection conn = HbaseConnectUtils.getHbaseConn();
 
     public void save(Put put, String tableName) {
         Table table = null;
