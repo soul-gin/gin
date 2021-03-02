@@ -56,7 +56,7 @@ public class CarFlowAnalysis {
                     @Override
                     public Tuple2<String, Integer> reduce(Tuple2<String, Integer> old, Tuple2<String, Integer> current) {
                         //old：上次聚合的结果  current：本次要聚合的数据
-                        old.f1 = old.f1 + current.f1;
+                        old.setField(old.f1 + current.f1, 1);
                         return old;
                     }
                 })*/
