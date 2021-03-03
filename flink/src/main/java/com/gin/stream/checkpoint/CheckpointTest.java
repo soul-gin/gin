@@ -38,6 +38,7 @@ public class CheckpointTest {
 
         //把数据打印到控制台, 使用一个并行度
         wordCount.print().setParallelism(1);
+        //容忍checkpoint失败的次数
         env.getCheckpointConfig().setTolerableCheckpointFailureNumber(2);
         //checkpoint超时时间  10分钟
         env.getCheckpointConfig().setCheckpointTimeout(5 * 60 * 1000);

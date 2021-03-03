@@ -1,4 +1,4 @@
-package com.gin.stream.window;
+package com.gin.stream.window.watermark;
 
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.functions.ReduceFunction;

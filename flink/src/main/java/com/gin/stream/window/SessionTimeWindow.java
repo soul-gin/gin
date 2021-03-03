@@ -10,6 +10,10 @@ import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.util.Collector;
 
 /**
+ *
+ * 会话窗口
+ * 场景较少
+ *
  * @author gin
  * @date 2021/3/2
  */
