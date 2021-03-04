@@ -72,13 +72,13 @@ public class PeriodicWatermark {
         env.getConfig().setAutoWatermarkInterval(100);
         //2、在往socket发射数据的时候 必须携带时间戳
         long delay = 3000L;
-        //
+        //根据数据时间进行处理
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 
         /* 连接socket获取输入的数据
         // nc -lk 8888
         // netstat -natp | grep 8888
-        // 测试数据格式, 时间戳 + 数据
+        // 测试数据格式, 时间戳 + 数据(窗口是9000-12000, 左闭右开)
 10000 hello gin
 11000 hello soul
 12000 hello soul

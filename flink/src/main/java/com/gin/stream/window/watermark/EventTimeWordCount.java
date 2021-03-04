@@ -28,13 +28,13 @@ public class EventTimeWordCount {
         //获取运行环境
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setParallelism(1);
-        //
+        //根据数据时间进行处理
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 
         // 连接socket获取输入的数据
         // nc -lk 8888
         // netstat -natp | grep 8888
-        // 测试数据格式, 时间戳 + 数据
+        // 测试数据格式, 时间戳 + 数据(窗口是9000-12000, 左闭右开)
         // 10000 hello 1
         // 11000 hello haha
         // 12000 hello xixi
