@@ -146,22 +146,28 @@ public class RocketMQToHBaseDemo {
         //StreamExecutionEnvironment env = StreamExecutionEnvironment.createRemoteEnvironment("node01", 8081);
 
         env.getConfig().setGlobalJobParameters(params);
-        env.setStateBackend(new MemoryStateBackend());
-        //env.setStateBackend(new FsStateBackend("hdfs://mycluster/flink/checkDir/"));
-        env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 
-        // start a checkpoint every 10s
-        env.enableCheckpointing(10000);
-        // advanced options:
-        // set mode to exactly-once (this is the default)
+        // 每隔 180000ms 往数据源中插入一个barrier(批次标志位)
+        env.enableCheckpointing(180000);
+        // 设置checkpoint模式, 默认就是 CheckpointingMode.EXACTLY_ONCE (精确一次消费)
         env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE);
         // checkpoints have to complete within one minute, or are discarded
-        env.getCheckpointConfig().setCheckpointTimeout(60000);
-        // make sure 500 ms of progress happen between checkpoints
-        env.getCheckpointConfig().setMinPauseBetweenCheckpoints(500);
-        // allow only one checkpoint to be in progress at the same time
+        env.getCheckpointConfig().setCheckpointTimeout(5 * 60 * 1000);
+        /*
+         * 设置checkpoint任务之间的间隔时间  checkpoint job1  checkpoint job2
+         * 防止触发太密集的flink checkpoint，导致消耗过多的flink集群资源
+         * 导致影响整体性能
+         * 1000ms
+         * 注意: 设置了这个参数, 表示checkpoint就应该是串行执行的;
+         * 即: setMaxConcurrentCheckpoints(1), 否则当前配置会失效
+         */
+        env.getCheckpointConfig().setMinPauseBetweenCheckpoints(1000);
+        //设置checkpoint最大并行的个数
+        // 1 表示串行执行
         env.getCheckpointConfig().setMaxConcurrentCheckpoints(1);
-        // enable externalized checkpoints which are retained after job cancellation
+        //flink 任务取消之后，checkpoint数据是否删除
+        // RETAIN_ON_CANCELLATION 当任务取消，checkpoints数据会保留
+        // DELETE_ON_CANCELLATION 当任务取消，checkpoints数据会删除
         env.getCheckpointConfig().enableExternalizedCheckpoints(
                 CheckpointConfig.ExternalizedCheckpointCleanup.RETAIN_ON_CANCELLATION);
 
