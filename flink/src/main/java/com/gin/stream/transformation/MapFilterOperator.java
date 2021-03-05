@@ -16,7 +16,7 @@ import org.apache.flink.api.java.tuple.Tuple2;
  * @date 2021/2/20
  * 算子 <-> 函数
  */
-public class MapOperator {
+public class MapFilterOperator {
 
 
     public static void main(String[] args) {
