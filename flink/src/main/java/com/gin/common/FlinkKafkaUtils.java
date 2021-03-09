@@ -1,5 +1,6 @@
 package com.gin.common;
 
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -42,6 +43,21 @@ public class FlinkKafkaUtils {
         props.setProperty("group.id", "flink-kafka-001");
         props.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         props.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+        return props;
+    }
+
+    public static Properties getKafkaPropsWithDeSerializer() {
+        // 启动 Kafka
+        // bin/kafka-server-start.sh -daemon config/server.properties
+        // 消费测试
+        // ./kafka-console-consumer.sh --bootstrap-server node01:9092,node02:9092,node03:9092 --topic flink-kafka --group group01 --property print.key=true --property print.value=true --property key.separator=,
+        //设置连接kafka的配置信息
+        Properties props = new Properties();
+        //注意: kafka0.10之前版本: zookeeper url, 之后版本: bootstrap.servers
+        props.setProperty("bootstrap.servers", "node01:9092,node02:9092,node03:9092");
+        props.setProperty("group.id", "flink-kafka-001");
+        props.setProperty(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+        props.setProperty(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         return props;
     }
 

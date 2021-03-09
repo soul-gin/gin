@@ -13,10 +13,21 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
+ * 不变配置文件加载
+ * 维度表信息基本不发生改变，或者发生改变的频率很低
+ * 实现方案：采用Flink提供的CachedFile
+ * Flink提供了一个分布式缓存（CachedFile），类似于hadoop，可以使用户在并行函数中很方便的
+ * 读取本地文件，并把它放在TaskManager节点中，防止task重复拉取。
+ * 此缓存的工作机制如下：
+ * 程序注册一个文件或者目录(本地或者远程文件系统，例如hdfs或者s3)，
+ * 通过ExecutionEnvironment注册缓存文件并为它起一个名称。
+ * 当程序执行，Flink自动将文件或者目录复制到所有TaskManager节点的本地文件系统，仅会执行一次。
+ * 用户可以通过这个指定的名称查找文件或者目录，然后从TaskManager节点的本地文件系统访问它
+ *
  * @author gin
  * @date 2021/3/8
  */
-public class CacheFileDemo {
+public class CacheFile {
 
     public static void main(String[] args) {
 
@@ -58,7 +69,7 @@ public class CacheFileDemo {
 
                 @Override
                 public String map(Integer value) throws Exception {
-                    if (null == id2CityMap.get(value)){
+                    if (null == id2CityMap.get(value)) {
                         return "not found";
                     }
                     return id2CityMap.get(value);
