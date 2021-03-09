@@ -10,6 +10,17 @@ import java.util.List;
 import java.util.Properties;
 
 /**
+ * 启动 Kafka
+ * bin/kafka-server-start.sh -daemon config/server.properties
+ * 连接broker-list, 发送消息至kafka名为config的topic
+ * cd /opt/software/kafka_2.11-2.0.0/bin
+ * ./kafka-console-producer.sh --broker-list node01:9092,node02:9092,node03:9092 --topic config
+ * >001 北京
+ * 消费测试
+ * cd /opt/software/kafka_2.11-2.0.0/bin
+ * ./kafka-console-consumer.sh --bootstrap-server node01:9092,node02:9092,node03:9092 --topic config --group group02 --property print.key=true --property print.value=true --property key.separator=,
+ *
+ *
  * @author gin
  * @date 2021/2/20
  */
