@@ -26,7 +26,7 @@ public class CoFlatMap {
 
     public static void main(String[] args) {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        //并行度3
+        //并行度1
         env.setParallelism(1);
 
         String filePath = "data/carId2Name";
