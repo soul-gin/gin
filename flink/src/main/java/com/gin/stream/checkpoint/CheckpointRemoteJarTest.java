@@ -22,7 +22,7 @@ import org.apache.flink.util.Collector;
  * yum install nc -y
  * yum install nmap -y
  */
-public class CheckpointTest {
+public class CheckpointRemoteJarTest {
     public static void main(String[] args) throws Exception {
 
         //获取运行环境
@@ -34,17 +34,14 @@ public class CheckpointTest {
         //每隔 1000ms 往数据源中插入一个barrier(批次标志位)
         //注意: 开启了 enableCheckpointing, 则 setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE) 会默认开启
         env.enableCheckpointing(1000);
-        DataStream<Tuple2<String, Integer>> wordCount = getWordCountStream(env);
 
-        //把数据打印到控制台, 使用一个并行度
-        wordCount.print().setParallelism(1);
         //容忍checkpoint失败的次数
         env.getCheckpointConfig().setTolerableCheckpointFailureNumber(2);
         //checkpoint超时时间  10分钟
         env.getCheckpointConfig().setCheckpointTimeout(5 * 60 * 1000);
         //设置checkpoint模式, 默认就是 CheckpointingMode.EXACTLY_ONCE (精确一次消费)
         env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE);
-        /**
+        /*
          * 设置checkpoint任务之间的间隔时间  checkpoint job1  checkpoint job2
          * 防止触发太密集的flink checkpoint，导致消耗过多的flink集群资源
          * 导致影响整体性能
@@ -62,14 +59,18 @@ public class CheckpointTest {
         env.getCheckpointConfig().enableExternalizedCheckpoints(CheckpointConfig.ExternalizedCheckpointCleanup.RETAIN_ON_CANCELLATION);
 
 
+        env.setParallelism(1);
+        DataStream<Tuple2<String, Integer>> wordCount = getWordCountStream(env);
+        //把数据打印到控制台, 使用一个并行度
+        wordCount.print();
         //注意：因为flink是懒加载的，所以必须调用execute方法，上面的代码才会执行
         //测试:
         // 启动任务
-        // flink run -c com.gin.stream.checkpoint.CheckpointTest ./flink-1.0-SNAPSHOT.jar
+        // flink run -c com.gin.stream.checkpoint.CheckpointRemoteJarTest ./flink-1.0-SNAPSHOT.jar
         // 取消任务, ctrl+c 或者页面取消
         // 使用 checkpoint 重启任务
-        // 注意: 对应的是包含 _metadata 的目录
-        // flink run -c com.gin.stream.checkpoint.CheckpointTest -s hdfs://node01:8020/flink/checkpoint/bb7169eb928edcc86f06a630a3ac6689/chk-87 ./flink-1.0-SNAPSHOT.jar
+        // 注意: 对应的是包含 _metadata 的目录(hdfs)
+        // flink run -c com.gin.stream.checkpoint.CheckpointRemoteJarTest -s hdfs://node01:8020/flink/checkpoint/bb7169eb928edcc86f06a630a3ac6689/chk-87 ./flink-1.0-SNAPSHOT.jar
         env.execute("streaming word count");
 
     }
