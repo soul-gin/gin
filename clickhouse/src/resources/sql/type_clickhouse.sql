@@ -40,12 +40,12 @@ select * from t_fixedString where tp='a\0';
 -- UUID
 select generateUUIDv4();
 create table t_uuid (
-                        id UInt8,
-                        name String,
-                        dept_id UUID
+    id UInt8,
+    name String,
+    dept_id UUID
 ) engine = Memory();
 
-insert into t_uuid values (1,'zs',generateUUIDv4()),(2,'ls',generateUUIDv4()), (2,'ls',);
+insert into t_uuid values (1,'zs',generateUUIDv4()),(2,'ls',generateUUIDv4()), (2,'ls',generateUUIDv4());
 
 select * from t_uuid;
 
