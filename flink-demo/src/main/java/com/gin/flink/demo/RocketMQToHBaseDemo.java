@@ -27,9 +27,7 @@ import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.utils.ParameterTool;
-import org.apache.flink.runtime.state.memory.MemoryStateBackend;
 import org.apache.flink.streaming.api.CheckpointingMode;
-import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.CheckpointConfig;
@@ -40,15 +38,15 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.rocketmq.client.AccessChannel;
-import org.apache.rocketmq.flink.RocketMQConfig;
-import org.apache.rocketmq.flink.RocketMQSource;
-import org.apache.rocketmq.flink.common.serialization.SimpleTupleDeserializationSchema;
+import com.apache.rocketmq.flink.RocketMQConfig;
+import com.apache.rocketmq.flink.RocketMQSource;
+import com.apache.rocketmq.flink.common.serialization.SimpleTupleDeserializationSchema;
 
 import java.io.IOException;
 import java.util.Properties;
 
-import static org.apache.rocketmq.flink.RocketMQConfig.CONSUMER_OFFSET_LATEST;
-import static org.apache.rocketmq.flink.RocketMQConfig.DEFAULT_CONSUMER_TAG;
+import static com.apache.rocketmq.flink.RocketMQConfig.CONSUMER_OFFSET_LATEST;
+import static com.apache.rocketmq.flink.RocketMQConfig.DEFAULT_CONSUMER_TAG;
 
 public class RocketMQToHBaseDemo {
 

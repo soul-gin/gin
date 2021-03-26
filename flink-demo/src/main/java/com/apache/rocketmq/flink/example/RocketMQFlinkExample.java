@@ -15,8 +15,12 @@
  * limitations under the License.
  */
 
-package com.gin.flink.source.rocketmq;
+package com.apache.rocketmq.flink.example;
 
+import com.apache.rocketmq.flink.RocketMQConfig;
+import com.apache.rocketmq.flink.RocketMQSink;
+import com.apache.rocketmq.flink.RocketMQSource;
+import com.apache.rocketmq.flink.common.serialization.SimpleTupleDeserializationSchema;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.runtime.state.memory.MemoryStateBackend;
@@ -26,17 +30,10 @@ import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.CheckpointConfig;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.rocketmq.client.AccessChannel;
-import com.apache.rocketmq.flink.RocketMQConfig;
-import com.apache.rocketmq.flink.RocketMQSink;
-import com.apache.rocketmq.flink.RocketMQSource;
-import com.apache.rocketmq.flink.common.serialization.SimpleTupleDeserializationSchema;
 import com.apache.rocketmq.flink.function.SinkMapFunction;
 import com.apache.rocketmq.flink.function.SourceMapFunction;
 
 import java.util.Properties;
-
-import static com.apache.rocketmq.flink.RocketMQConfig.CONSUMER_OFFSET_LATEST;
-import static com.apache.rocketmq.flink.RocketMQConfig.DEFAULT_CONSUMER_TAG;
 
 public class RocketMQFlinkExample {
 
@@ -47,11 +44,13 @@ public class RocketMQFlinkExample {
     private static Properties getConsumerProps() {
         Properties consumerProps = new Properties();
         consumerProps.setProperty(RocketMQConfig.NAME_SERVER_ADDR,
-                "10.0.0.21:9876");
-        consumerProps.setProperty(RocketMQConfig.CONSUMER_GROUP, "GroupTest");
-        consumerProps.setProperty(RocketMQConfig.CONSUMER_TOPIC, "SOURCE_TOPIC");
-        consumerProps.setProperty(RocketMQConfig.CONSUMER_TAG, DEFAULT_CONSUMER_TAG);
-        consumerProps.setProperty(RocketMQConfig.CONSUMER_OFFSET_RESET_TO, CONSUMER_OFFSET_LATEST);
+                "http://${instanceId}.${region}.mq-internal.aliyuncs.com:8080");
+        consumerProps.setProperty(RocketMQConfig.CONSUMER_GROUP, "${ConsumerGroup}");
+        consumerProps.setProperty(RocketMQConfig.CONSUMER_TOPIC, "${SourceTopic}");
+        consumerProps.setProperty(RocketMQConfig.CONSUMER_TAG, RocketMQConfig.DEFAULT_CONSUMER_TAG);
+        consumerProps.setProperty(RocketMQConfig.CONSUMER_OFFSET_RESET_TO, RocketMQConfig.CONSUMER_OFFSET_LATEST);
+        consumerProps.setProperty(RocketMQConfig.ACCESS_KEY, "${AccessKey}");
+        consumerProps.setProperty(RocketMQConfig.SECRET_KEY, "${SecretKey}");
         consumerProps.setProperty(RocketMQConfig.ACCESS_CHANNEL, AccessChannel.CLOUD.name());
         return consumerProps;
     }
@@ -63,8 +62,10 @@ public class RocketMQFlinkExample {
     private static Properties getProducerProps() {
         Properties producerProps = new Properties();
         producerProps.setProperty(RocketMQConfig.NAME_SERVER_ADDR,
-                "10.0.0.21:9876");
-        producerProps.setProperty(RocketMQConfig.PRODUCER_GROUP, "GroupTest2");
+                "http://${instanceId}.${region}.mq-internal.aliyuncs.com:8080");
+        producerProps.setProperty(RocketMQConfig.PRODUCER_GROUP, "${ProducerGroup}");
+        producerProps.setProperty(RocketMQConfig.ACCESS_KEY, "${AccessKey}");
+        producerProps.setProperty(RocketMQConfig.SECRET_KEY, "${SecretKey}");
         producerProps.setProperty(RocketMQConfig.ACCESS_CHANNEL, AccessChannel.CLOUD.name());
         return producerProps;
     }

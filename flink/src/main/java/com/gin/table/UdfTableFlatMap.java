@@ -28,6 +28,18 @@ public class UdfTableFlatMap extends TableFunction<Row> {
      * @param line 源数据
      */
     public void eval(String line){
+        //自定义逻辑:
+        //单词作为第一个字段, 单词出现的次数作为第二个字段
+        String[] split = line.split(" ");
+        for (String s : split) {
+            Row row = new Row(2);
+            // 第一个字段为单词
+            row.setField(0, s);
+            // 第二个字段映射为 1
+            row.setField(1, 1);
+            // 收集数据
+            collect(row);
+        }
 
     }
 }

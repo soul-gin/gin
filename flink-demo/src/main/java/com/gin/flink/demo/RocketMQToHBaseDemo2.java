@@ -19,7 +19,6 @@ package com.gin.flink.demo;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.gin.flink.common.unrepeated.UnrepeatedKeyProcessBitmap;
 import com.gin.flink.common.unrepeated.UnrepeatedKeyProcessBitmapCnt;
 import com.gin.flink.sink.hbase.stream.HBaseWriterSinkSingle;
 import com.gin.flink.sink.hbase.utils.HBaseDAOImpl;
@@ -41,15 +40,15 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.rocketmq.client.AccessChannel;
-import org.apache.rocketmq.flink.RocketMQConfig;
-import org.apache.rocketmq.flink.RocketMQSource;
-import org.apache.rocketmq.flink.common.serialization.SimpleTupleDeserializationSchema;
+import com.apache.rocketmq.flink.RocketMQConfig;
+import com.apache.rocketmq.flink.RocketMQSource;
+import com.apache.rocketmq.flink.common.serialization.SimpleTupleDeserializationSchema;
 
 import java.io.IOException;
 import java.util.Properties;
 
-import static org.apache.rocketmq.flink.RocketMQConfig.CONSUMER_OFFSET_LATEST;
-import static org.apache.rocketmq.flink.RocketMQConfig.DEFAULT_CONSUMER_TAG;
+import static com.apache.rocketmq.flink.RocketMQConfig.CONSUMER_OFFSET_LATEST;
+import static com.apache.rocketmq.flink.RocketMQConfig.DEFAULT_CONSUMER_TAG;
 
 public class RocketMQToHBaseDemo2 {
 
