@@ -1,3 +1,4 @@
+-- 支持两种: Ordinary 和 MySQL
 -- Ordinary 就是ClickHouse中默认数据库引擎
 create database test1 engine = Ordinary;
 -- Ordinary 为默认值, 可以不用指定
@@ -33,7 +34,3 @@ desc mysql_table;
 select * from mysql_table;
 insert into mysql_table values (3,'ww');
 select * from mysql_table;
-
--- 内存数据库引擎
--- 测试用
--- engine = Memory()
