@@ -330,17 +330,276 @@ select * from t_view2;
 -- select * from t_view;
 
 
--- 创建物化视图(将原有数据也按物化视图逻辑进行计算: populate)
+-- 创建物化视图(将原有数据也按物化视图逻辑进行计算: populate, 可选, 不适合在数据会持续加载时使用 populate)
 create materialized view t_materialized engine = MergeTree() order by id  populate
 as select id,sum(age) as total_age from t_v_mt group by id;
 select * from t_materialized;
 -- drop table t_v_mt 源表被删除, 物化视图依然有数据
+insert into t_v_mt values (1,'zs2',100),(2,'ls2',100);
+select * from t_materialized;
+-- 同一批插入, 同id会触发materialized的合并
+insert into t_v_mt values (1,'zs3',100),(1,'ls3',200);
+select * from t_materialized;
 
 
 
 
+------ ReplacingMergeTree ---
+drop table t_mt;
+create table t_mt(id UInt8,name String,age UInt8,workdays UInt32,loc String)
+    engine = MergeTree()
+        order by id
+        partition by loc;
+
+insert into t_mt values (1,'zs',18,10,'北京'),(2,'ls',19,11,'上海'),(3,'ww',20,12,'北京');
+insert into t_mt values (1,'zs1',10,30,'北京'),(2,'ls1',25,8,'上海');
+-- 分区合并, 相同数据在同一块, loc不会乱序了
+optimize table t_mt final;
+select * from t_mt;
+
+
+create table t_replaceing (id UInt8,name String,age UInt8,workdays UInt32,loc String)
+    engine = ReplacingMergeTree()
+        order by id
+        partition by loc;
+
+insert into t_replaceing values (1,'zs',18,10,'北京'),(2,'ls',19,11,'上海'),(3,'ww',20,12,'北京');
+insert into t_replaceing values (1,'zs1',10,30,'北京'),(2,'ls1',25,8,'上海');
+
+-- 未触发合并
+-- select * from t_replaceing;
+-- ┌─id─┬─name─┬─age─┬─workdays─┬─loc──┐
+-- │  1 │ zs   │  18 │       10 │ 北京 │
+-- │  1 │ zs1  │  10 │       30 │ 北京 │
+-- │  3 │ ww   │  20 │       12 │ 北京 │
+-- └────┴──────┴─────┴──────────┴──────┘
+-- ┌─id─┬─name─┬─age─┬─workdays─┬─loc──┐
+-- │  2 │ ls   │  19 │       11 │ 上海 │
+-- │  2 │ ls1  │  25 │        8 │ 上海 │
+-- └────┴──────┴─────┴──────────┴──────┘
+
+-- 触发合并
+-- optimize table t_replaceing;
+-- select * from t_replaceing;
+
+-- ┌─id─┬─name─┬─age─┬─workdays─┬─loc──┐
+-- │  1 │ zs1  │  10 │       30 │ 北京 │
+-- │  3 │ ww   │  20 │       12 │ 北京 │
+-- └────┴──────┴─────┴──────────┴──────┘
+-- ┌─id─┬─name─┬─age─┬─workdays─┬─loc──┐
+-- │  2 │ ls1  │  25 │        8 │ 上海 │
+-- └────┴──────┴─────┴──────────┴──────┘
+
+-- ReplacingMergeTree是需要注意以下几点：
+-- 如何判断数据重复:
+-- ReplacingMergeTree在去除重复数据时，是以ORDERBY排序键为基准的，而不是PRIMARY KEY。
+-- 何时删除重复数据:
+-- 在执行分区合并时，会触发删除重复数据。optimize的合并操作是在后台执行的，无法预测具体执行时间点，除非是手动执行。
+-- 不同分区的重复数据不会被去重:
+-- ReplacingMergeTree是以分区为单位删除重复数据的。只有在相同的数据分区内重复的数据才可以被删除，而不同数据分区之间的重复数据依然不能被剔除。
+-- 数据去重的策略是什么:
+-- 如果没有设置[ver]版本号，则保留同一组重复数据中的最新插入的数据；如果设置了[ver]版本号，则保留同一组重复数据中ver字段取值最大的那一行。
+-- optimize命令使用:
+-- 一般在数据量比较大的情况，尽量不要使用该命令。因为在海量数据场景下，执行optimize要消耗大量时间。
+
+drop table t_replaceing;
+create table t_replaceing (id UInt8,name String,age UInt8,workdays UInt32,loc String)
+    engine = ReplacingMergeTree(workdays)
+        order by (id,name)
+        primary key id
+        partition by loc;
+
+insert into t_replaceing values (1,'zs',18,10,'北京'),(2,'ls',19,11,'上海'),(3,'ww',20,12,'北京');
+insert into t_replaceing values (1,'zs1',10,30,'北京'),(2,'ls1',25,8,'上海');
+
+optimize table t_replaceing final;
+select * from t_replaceing;
+-- id 和 name均相同才会被替换
+-- ┌─id─┬─name─┬─age─┬─workdays─┬─loc──┐
+-- │  1 │ zs   │  18 │       10 │ 北京 │
+-- │  1 │ zs1  │  10 │       30 │ 北京 │
+-- │  3 │ ww   │  20 │       12 │ 北京 │
+-- └────┴──────┴─────┴──────────┴──────┘
+-- ┌─id─┬─name─┬─age─┬─workdays─┬─loc──┐
+-- │  2 │ ls   │  19 │       11 │ 上海 │
+-- │  2 │ ls1  │  25 │        8 │ 上海 │
+-- └────┴──────┴─────┴──────────┴──────┘
+
+-- 使用 workdays 进行去重(取最大值, 注意去重是最终结果, 定时触发)
+-- 不同分区不会去重
+drop table t_replaceing;
+create table t_replaceing (id UInt8,name String,age UInt8,workdays UInt32,loc String)
+    engine = ReplacingMergeTree(workdays)
+        order by id
+        partition by loc;
+
+insert into t_replaceing values (1,'zs',18,10,'北京'),(2,'ls',19,11,'上海'),(3,'ww',20,12,'北京');
+insert into t_replaceing values (1,'zs1',10,30,'上海'),(2,'ls1',25,8,'上海');
+optimize table t_replaceing final;
+select * from t_replaceing;
+
+
+------ SummingMergeTree -------
+-- SummingMergeTree是根据什么对两条数据进行合并的
+-- 用ORBER BY排序键作为聚合数据的条件Key。即如果排序key是相同的，则会合并成一条数据，并对指定的合并字段进行聚合。
+-- 仅对分区内的相同排序key的数据行进行合并
+-- 以数据分区为单位来聚合数据。当分区合并时，同一数据分区内聚合Key相同的数据会被合并汇总，而不同分区之间的数据则不会被汇总。
+-- 如果没有指定聚合字段，会怎么聚合
+-- 如果没有指定聚合字段，则会按照非主键的数值类型字段进行聚合。
+-- 对于非汇总字段的数据，该保留哪一条
+-- 如果两行数据除了排序字段相同，其他的非聚合字段不相同，那么在聚合发生时，会保留最初的那条数据，新插入的数据对应的那个字段值会被舍弃。
+
+create table t_summing(id UInt8,name String,age UInt8,workdays UInt32,loc String)
+    engine = SummingMergeTree()
+        order by id
+        partition by loc;
+
+insert into t_summing values (1,'zs',18,10,'北京'),(2,'ls',19,11,'上海'),(3,'ww',20,12,'北京');
+insert into t_summing values (1,'zs1',10,30,'北京'),(2,'ls1',25,8,'上海');
+select * from t_summing;
+
+-- 触发合并
+optimize table t_summing final;
+select * from t_summing;
+
+-- 数字值默认进行累加, 非数字值保留一份最开始数据
+-- ┌─id─┬─name─┬─age─┬─workdays─┬─loc──┐
+-- │  1 │ zs   │  28 │       40 │ 北京 │
+-- │  3 │ ww   │  20 │       12 │ 北京 │
+-- └────┴──────┴─────┴──────────┴──────┘
+-- ┌─id─┬─name─┬─age─┬─workdays─┬─loc──┐
+-- │  2 │ ls   │  44 │       19 │ 上海 │
+-- └────┴──────┴─────┴──────────┴──────┘
+
+-- 仅仅累加 workdays
+drop table t_summing;
+create table t_summing(id UInt8,name String,age UInt8,workdays UInt32,loc String)
+    engine = SummingMergeTree(workdays)
+        order by id
+        partition by loc;
+
+
+insert into t_summing values (1,'zs',18,10,'北京'),(2,'ls',19,11,'上海'),(3,'ww',20,12,'北京');
+insert into t_summing values (1,'zs1',10,30,'北京'),(2,'ls1',25,8,'上海');
+optimize table t_summing final;
+select * from t_summing;
+
+--┌─id─┬─name─┬─age─┬─workdays─┬─loc──┐
+--│  1 │ zs   │  18 │       40 │ 北京 │
+--│  3 │ ww   │  20 │       12 │ 北京 │
+--└────┴──────┴─────┴──────────┴──────┘
+--┌─id─┬─name─┬─age─┬─workdays─┬─loc──┐
+--│  2 │ ls   │  19 │       19 │ 上海 │
+--└────┴──────┴─────┴──────────┴──────┘
+
+
+-- 累加 age workdays
+drop table t_summing;
+create table t_summing(id UInt8,name String,age UInt8,workdays UInt32,loc String)
+    engine = SummingMergeTree((age,workdays))
+        order by id
+        partition by loc;
+
+insert into t_summing values (1,'zs',18,10,'北京'),(2,'ls',19,11,'上海'),(3,'ww',20,12,'北京');
+insert into t_summing values (1,'zs1',10,30,'北京'),(2,'ls1',25,8,'上海');
+optimize table t_summing final;
+select * from t_summing;
+
+
+--------AggregatingMergeTree -----
+-- AggregateFunction(sum,Decimal32(2)) 对相同主键的数据进行累加
+create table t_aggregate(id UInt8,name String,age UInt8,salary AggregateFunction(sum,Decimal32(2)),loc String)
+    engine = AggregatingMergeTree()
+        order by id
+        partition by loc;
+
+insert into t_aggregate select 1,'zs',18,sumState(toDecimal32(100,2)),'北京';
+insert into t_aggregate select 2,'ls',19,sumState(toDecimal32(200,2)),'上海';
+insert into t_aggregate select 3,'ww',20,sumState(toDecimal32(300,2)),'北京';
+-- 查看结果数据, 求和的数据不能直接用字段查询, 需要 sumMerge(salary), 同时需要 group by
+select id,name ,age ,loc,sumMerge(salary) from t_aggregate group by id,name,age ,loc;
+-- 继续插入重复id数据
+insert into t_aggregate select 1,'zs1',21,sumState(toDecimal32(400,2)),'北京';
+insert into t_aggregate select 2,'ls1',22,sumState(toDecimal32(500,2)),'上海';
+-- 查看未触发合并的结果数据
+select id,name ,age ,loc,sumMerge(salary) from t_aggregate group by id,name,age ,loc;
+-- 查看合并的结果数据
+optimize table t_aggregate final ;
+select id,name ,age ,loc,sumMerge(salary) from t_aggregate group by id,name,age ,loc;
+
+
+-- 经常使用  物化视图(AggregatingMergeTree类型) + MergeTree 替代  AggregatingMergeTree,
+-- 既能保存源数据, 又能获取累计值
+-- MergeTree 源表
+drop table t_mt;
+create table t_mt(id UInt8,name String,age UInt8,salary Decimal32(2),loc String)
+    engine = MergeTree()
+        order by id
+        partition by loc;
+
+--统计相同id的总工资(物化视图)
+drop table t_materialized;
+create materialized view t_materialized engine= AggregatingMergeTree
+    order by id as
+select id ,sumState(salary) as total_salary from t_mt group by id;
+
+--向表 t_mt中插入数据
+insert into t_mt values (1,'zs',18,toDecimal32(100,2),'北京'),(2,'ls',19,toDecimal32(200,2),'上海'),(3,'ww',20,toDecimal32(300,2),'北京');
+insert into t_mt values (1,'zs1',21,toDecimal32(400,2),'北京'),(2,'ls1',22,toDecimal32(500,2),'上海');
+select id,sumMerge(total_salary) as total_sl from t_materialized group by id;
+
+insert into t_mt values (10,'zs',18,toDecimal32(100,2),'北京'),(10,'ls',19,toDecimal32(200,2),'上海'),(10,'ww',20,toDecimal32(300,2),'北京');
+select id,sumMerge(total_salary) as total_sl from t_materialized group by id;
 
 
 
+
+--- CollapsingMergeTree ----
+--
+create table t_collapsing(id UInt8,name String,age UInt8,loc String,sss Int8)
+    engine = CollapsingMergeTree(sss)
+        order by id
+        partition by loc;
+
+insert into t_collapsing values (1,'zs',18,'北京',1),(2,'ls',19,'上海',1),(3,'ww',20,'北京',1);
+insert into t_collapsing values (1,'zs',18,'北京',-1);
+-- 未触发合并, 不会删除
+select * from t_collapsing;
+-- 触发了合并, 会删除数据
+optimize table t_collapsing final;
+select * from t_collapsing;
+-- 1表示增加, -1表示删除: 同一条语句中-1在前, 1在后, 则1不会插入
+insert into t_collapsing values (5,'tt',8,'上海',-1),(5,'tt1',22,'上海',-1),(5,'tt2',23,'上海',1);
+optimize table t_collapsing final;
+select * from t_collapsing;
+-- 先插入了 -1 的数据后, 在不同语句触发 1 的新增数据操作, 不会将 -1 和 1 的两个数据进行合并
+insert into t_collapsing values (5,'mm2',22,'上海',1);
+optimize table t_collapsing final;
+select * from t_collapsing;
+-- 不同分区数据不会折叠删除
+insert into t_collapsing values (6,'aaa',18,'北京',1),(6,'bbb',19,'上海',-1);
+insert into t_collapsing values (7,'s1',1,'上海',-1),(7,'s2',2,'上海',1);
+optimize table t_collapsing final;
+select * from t_collapsing;
+-- 合并有顺序(先1后-1才能合并删除)
+insert into t_collapsing values (8,'g1',1,'南京',-1),(8,'g2',2,'南京',-1),(8,'g3',3,'南京',1);
+insert into t_collapsing values (9,'p1',10,'上海',-1),(9,'p2',11,'上海',-1),(9,'p3',12,'上海',1);
+optimize table t_collapsing final;
+select * from t_collapsing;
+
+
+-- VersionedCollapsingMergeTree( 解决CollapsingMergeTree必须有顺序合并问题 )
+create table t_versioned_collapsing(id UInt8,name String,age UInt8,loc String,sss Int8,ver UInt8)
+    engine = VersionedCollapsingMergeTree(sss,ver)
+        order by id
+        partition by loc;
+
+-- 同版本号的可以 通过 1 和 -1进行合并
+insert into t_versioned_collapsing values (1,'zs',18,'北京',1,10),(2,'ls',19,'上海',1,11),(3,'ww',20,'北京',1,12);
+insert into t_versioned_collapsing values (1,'zs1',19,'北京',-1,10);
+insert into t_versioned_collapsing values (8,'g1',1,'南京',-1,50),(8,'g2',2,'南京',-1,50),(8,'g3',3,'南京',1,50);
+insert into t_versioned_collapsing values (18,'v1',1,'南京',1,51),(18,'v2',2,'南京',-1,3);
+optimize table t_versioned_collapsing final;
+select * from t_versioned_collapsing;
 
 
