@@ -39,6 +39,7 @@ public class FlinkWriteToClickHouse {
                 })
                 .returns(TypeInformation.of(new TypeHint<Tuple3<Integer, String, Integer>>() {
                 }));
+        //String insetIntoCkSql = "insert into test values (?,?,?)";
         String insetIntoCkSql = "insert into test values (?,?,?)";
 
         SinkFunction<Tuple3<Integer, String, Integer>> sink = JdbcSink.sink(
