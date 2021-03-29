@@ -45,6 +45,12 @@ create table t_mysql (id UInt8,name String,age UInt8) engine = MySQL('node01:330
 
 
 ------- Kafka ------
+-- csv 格式消费
+-- 注意先创建 topic 或者 直接使用 kafka-console-producer.sh
+-- kafka-console-producer.sh --broker-list node01:9092  --topic t1
+-- 1,zs1,19
+-- 2,ls2,20
+-- 3,ww2,22
 create table t_kafka (id UInt8,name String,age UInt8) engine = Kafka()
 settings
 kafka_broker_list = 'node01:9092,node02:9092,node03:9092',
@@ -52,30 +58,38 @@ kafka_topic_list = 't1',
 kafka_group_name = 'group_name_test',
 kafka_format = 'CSV';
 
--- 创建物化视图引擎查询t_kafka中的数据
+-- 为留存kafka消费后的数据(t_kafka 不会保留数据, 消费完成则丢弃)
+-- 方式一: 创建物化视图引擎查询t_kafka中的数据
 create materialized view t_kafka_view engine = MergeTree order by id as select * from t_kafka;
+select * from t_kafka_view;
+drop table t_kafka_view;
 
-
--- 创建普通MergetTree表
+-- 方式二: 创建普通MergeTree表 + materialized表(一般 view 会和 源表 同时被删除)
+-- 为了在 t_kafka 被删除后, 对应删除 materialized, 数据依然留存在 普通MergeTree 中
 create table t_mymt (id UInt8,name String,age UInt8) engine = MergeTree() order by id;
+-- 将数据从kafka中获取后, 存入物化view 和 普通MergeTree表
+create materialized view t_kafka_view to t_mymt as select * from t_kafka;
+select * from t_kafka_view;
+select * from t_mymt;
 
 
-create materialized view t_kafka_view  to t_mymt as select * from t_kafka;
-
-
-----
-create table t_kafka (id UInt8,name String,age UInt8) engine = Kafka()
-settings
-    kafka_broker_list = 'node1:9092,node2:9092,node3:9092',
-    kafka_topic_list = 't2',
-    kafka_group_name = 'xx1',
-    kafka_format = 'JSONEachRow';
-
+-- json 格式消费
+-- 注意先创建 topic 或者 直接使用 kafka-console-producer.sh
+-- kafka-console-producer.sh --broker-list node01:9092  --topic t2
 -- {"id":1,"name":"zs","age":19}
 -- {"id":2,"name":"ls","age":20}
 -- {"id":3,"name":"ww","age":22}
 -- {"id":4,"name":"wssw","age":11}
+create table t_kafka2 (id UInt8,name String,age UInt8) engine = Kafka()
+settings
+    kafka_broker_list = 'node01:9092,node02:9092,node03:9092',
+    kafka_topic_list = 't2',
+    kafka_group_name = 'xx1',
+    kafka_format = 'JSONEachRow';
 
+create materialized view t_kafka_view2 engine = MergeTree order by id as select * from t_kafka2;
+
+select * from t_kafka_view2;
 
 
 
