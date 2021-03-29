@@ -29,7 +29,6 @@ public class FlinkWriteToClickHouse {
         // yum install nmap -y
         // netstat -natp |grep 8888
         // nc -lk 8888
-        // 172.21.194.111
         // 6,zl,26
         // 7,wb,26
         DataStreamSource<String> dss = env.socketTextStream("node01", 8888);
