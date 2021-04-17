@@ -14,7 +14,7 @@ public class PropertiesUtils {
 
     static {
         try {
-            InputStream inputStream = PropertiesUtils.class.getClassLoader().getResourceAsStream("flink-conf.properties");
+            InputStream inputStream = PropertiesUtils.class.getClassLoader().getResourceAsStream("flink-conf.yaml");
             prop.load(inputStream);
         } catch (IOException e) {
             e.printStackTrace();
