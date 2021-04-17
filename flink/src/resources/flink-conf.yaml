@@ -1,0 +1,4 @@
+flink.streaming.app.name: test
+# 在启动的flink服务 /conf 中的 flink-conf.yaml 进行配置
+state.backend: filesystem
+state.checkpoints.dir: hdfs://mycluster/flink/checkDir
