@@ -32,9 +32,9 @@ public class UdfTableFlatMapTest {
         Table table = tableEnv.fromDataStream(text, "line");
         // 注册UDF, 名为: mySplit
         tableEnv.registerFunction("mySplit", new UdfTableFlatMap());
-        // 使用自定义的 mySplit 函数, 处理数据源名为的 line 字段
+        // 使用自定义的 mySplit 函数, 处理数据源名为的 line 字段, 并定义处理后的两个字段名,
         Table result = table.flatMap("mySplit(line)").as("word, word_count")
-                .groupBy("word").select("word, word_count.sum");
+                .groupBy("word").select("word, word_count.sum").as("单词, 单词次数");
         //将 table 对象中的数据输出
         // toRetractStream (都可以使用, 推荐(流,批计算均可))
         // toAppendStream (状态中没有 insert 和 update 才可以使用, 如:批计算, 无状态)
